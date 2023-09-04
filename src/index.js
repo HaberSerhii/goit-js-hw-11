@@ -1,82 +1,153 @@
-import axios from 'axios';
 import Notiflix from 'notiflix';
-import SlimSelect from 'slim-select';
-import { fetchBreeds, fetchCatByBreed } from './cat_API';
+import axios from 'axios';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
-axios.defaults.headers.common['x-api-key'] =
-  'live_jH0JHaefoLwCw35OQ4J1Zp9517hFIHjKVvDacpAvxYC0XW5mSXJv1XMkz0pA5E4W';
-axios.defaults.baseURL = 'https://api.thecatapi.com/v1';
+const refs = {
+  formEl: document.querySelector('.search-form'),
+  galleryEl: document.querySelector('.gallery'),
+  brtMoreEl: document.querySelector('.load-more'),
+  endOfListEL: document.querySelector('.end-message'),
+};
 
-const selectEl = document.querySelector('.breed-select');
-const catInfoEl = document.querySelector('.cat-info');
-const loaderEl = document.querySelector('.loader');
-const errorEl = document.querySelector('.error');
+axios.defaults.baseURL = 'https://pixabay.com/api/';
+const API_KEY = '39239783-347149b8b5440e3ff30f6c2ce';
+const IMAGE_TYPE = 'photo';
+const IMAGE_ORIENTATION = 'horizontal';
+const IMAGE_SAFESEARCH = 'true';
+const NUMBER_OF_IMAGE = 40;
+const gallery = new SimpleLightbox('.gallery .photo-card a', {
+  captionsData: 'alt',
+  captionPosition: 'bottom',
+  captionDelay: 250,
+});
 
-hiddenEl(errorEl);
-hiddenEl(selectEl);
+let countOfPage = 1;
+let qValue = null;
+let totalHits = null;
 
-selectEl.addEventListener('change', handlerChose);
+refs.brtMoreEl.classList.toggle('hidden');
+refs.formEl.addEventListener('submit', formHandler);
+refs.brtMoreEl.addEventListener('click', moreImageOnClick);
 
-fetchBreeds()
-  .then(data => {
-    const markupArr = data.map(
-      element => `<option value="${element.id}">${element.name}</option>`
-    );
-    selectEl.innerHTML = markupArr.join('');
-    hiddenEl(selectEl);
-    hiddenEl(loaderEl);
-
-    new SlimSelect({
-      select: '#single',
-    });
-  })
-  .catch(
-    error => (
-      hiddenEl(errorEl),
-      hiddenEl(loaderEl),
-      Notiflix.Report.failure('Error', `${error}`)
-    )
-  );
-
-function handlerChose(evt) {
-  if (!evt.target.classList.contains('breed-select')) {
-    return;
-  } else {
-    hiddenEl(loaderEl);
-    hiddenEl(catInfoEl);
-    const catId = evt.target.value;
-    fetchCatByBreed(catId)
-      .then(data => {
-        hiddenEl(catInfoEl);
-        const { name, description, temperament } = data[0].breeds[0];
-        addCatInfoMarkup(
-          catInfoEl,
-          data[0].url,
-          name,
-          description,
-          temperament
-        );
-        hiddenEl(loaderEl);
-      })
-      .catch(
-        error => (
-          hiddenEl(loaderEl),
-          hiddenEl(errorEl),
-          Notiflix.Report.failure('Error', `${error}`)
-        )
+async function moreImageOnClick() {
+  countOfPage += 1;
+  try {
+    const data = await searchImage(qValue, countOfPage);
+    refs.brtMoreEl.classList.toggle('hidden');
+    totalHits -= NUMBER_OF_IMAGE;
+    if (totalHits <= NUMBER_OF_IMAGE) {
+      refs.brtMoreEl.classList.add('hidden');
+      refs.endOfListEL.classList.remove('hidden');
+    }
+    const markupArr = data.hits.map(item => {
+      return renderMarkup(
+        item.webformatURL,
+        item.largeImageURL,
+        item.tags,
+        item.views,
+        item.likes,
+        item.comments,
+        item.downloads
       );
+    });
+    refs.galleryEl.insertAdjacentHTML('beforeend', markupArr.join(''));
+    gallery.refresh();
+    smoothScroll(0.55);
+    Notiflix.Notify.success(`"Hooray! We found ${totalHits} images."`);
+    refs.brtMoreEl.classList.toggle('hidden');
+  } catch (error) {
+    Notiflix.Notify.failure(`Sorry, ${error.message}`);
   }
 }
 
-function hiddenEl(el) {
-  return el.classList.toggle('hidden');
+async function formHandler(evt) {
+  evt.preventDefault();
+  countOfPage = 1;
+  qValue = evt.target.elements[0].value.trim();
+  if (qValue === '') {
+    return Notiflix.Notify.failure('Sorry, the search must not be empty');
+  }
+  try {
+    const data = await searchImage(qValue, countOfPage);
+    totalHits = data.totalHits;
+    if (!data.hits.length) {
+      refs.galleryEl.innerHTML = '';
+      Notiflix.Notify.failure(
+        'Sorry, there are no images matching your search query. Please try again.'
+      );
+    } else {
+      refs.brtMoreEl.classList.remove('hidden');
+      refs.endOfListEL.classList.add('hidden');
+      Notiflix.Notify.success(`"Hooray! We found ${totalHits} images."`);
+      refs.galleryEl.innerHTML = '';
+      const markupArr = data.hits.map(item => {
+        return renderMarkup(
+          item.webformatURL,
+          item.largeImageURL,
+          item.tags,
+          item.views,
+          item.likes,
+          item.comments,
+          item.downloads
+        );
+      });
+      refs.galleryEl.innerHTML = markupArr.join('');
+      smoothScroll(0.15);
+      if (totalHits <= NUMBER_OF_IMAGE) {
+        refs.brtMoreEl.classList.add('hidden');
+        refs.endOfListEL.classList.remove('hidden');
+      }
+    }
+    gallery.refresh();
+  } catch (error) {
+    Notiflix.Notify.failure(`Sorry, ${error.message}`);
+  }
 }
 
-function addCatInfoMarkup(catInfo, url, name, description, temperament) {
-  catInfo.innerHTML = `<img src="${url}" alt="cat ${name}" width='600' >
-      <div class="cats-info">
-        <h2 class="cat-name">${name}</h2>
-        <p class="cat-description">${description}</p>
-        <p class="cat-temperament">Temperament: <span class="temperament-span">${temperament}</span></p>
-      </div>`;
+async function searchImage(qValue, countOfPage) {
+  const response = await axios.get(`?key=${API_KEY}&q=
+  ${qValue}&image_type=${IMAGE_TYPE}&orientation=${IMAGE_ORIENTATION}&
+  safesearch=${IMAGE_SAFESEARCH}&per_page=${NUMBER_OF_IMAGE}&page=${countOfPage}`);
+  const imagesInfo = await response.data;
+  return imagesInfo;
+}
+
+function renderMarkup(
+  webformatURL,
+  largeImageURL,
+  tags,
+  likes,
+  views,
+  comments,
+  downloads
+) {
+  refs.brtMoreEl.classList.toggle('hidden');
+  return `<div class="photo-card">
+  <a href="${largeImageURL}"><img src="${webformatURL}" alt="${tags}" loading="lazy" width="100%" height="300"/></a>
+  <div class="info">
+    <p class="info-item">
+      Likes: <b>${likes}</b>
+    </p>
+    <p class="info-item">
+      Views: <b>${views}</b>
+    </p>
+    <p class="info-item">
+      Comments: <b>${comments}</b>
+    </p>
+    <p class="info-item">
+      Downloads: <b>${downloads}</b>
+    </p>
+  </div>
+</div>`;
+}
+
+function smoothScroll(value) {
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+  window.scrollBy({
+    top: cardHeight * value,
+    behavior: 'smooth',
+  });
 }

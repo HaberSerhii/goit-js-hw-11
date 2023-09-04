@@ -24,7 +24,7 @@
     "lodash.throttle": "^4.1.1",
     "modern-normalize": "^1.1.0",
     "notiflix": "^3.2.6",
-    "simplelightbox": "^2.14.1",
+    "simplelightbox": "^2.14.2",
     "slim-select": "^2.6.0"
   },
   "devDependencies": {
