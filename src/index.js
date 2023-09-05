@@ -36,20 +36,12 @@ async function moreImageOnClick() {
     const data = await searchImage(qValue, countOfPage);
     refs.brtMoreEl.classList.toggle('hidden');
     totalHits -= NUMBER_OF_IMAGE;
-    if (totalHits <= NUMBER_OF_IMAGE) {
-      refs.brtMoreEl.classList.add('hidden');
-      refs.endOfListEL.classList.remove('hidden');
+    if (totalHits - 1 <= NUMBER_OF_IMAGE / 39) {
+      refs.brtMoreEl.setAttribute('hidden', 'true');
+      return refs.endOfListEL.classList.remove('hidden');
     }
     const markupArr = data.hits.map(item => {
-      return renderMarkup(
-        item.webformatURL,
-        item.largeImageURL,
-        item.tags,
-        item.views,
-        item.likes,
-        item.comments,
-        item.downloads
-      );
+      return renderMarkup(item);
     });
     refs.galleryEl.insertAdjacentHTML('beforeend', markupArr.join(''));
     gallery.refresh();
@@ -82,15 +74,7 @@ async function formHandler(evt) {
       Notiflix.Notify.success(`"Hooray! We found ${totalHits} images."`);
       refs.galleryEl.innerHTML = '';
       const markupArr = data.hits.map(item => {
-        return renderMarkup(
-          item.webformatURL,
-          item.largeImageURL,
-          item.tags,
-          item.views,
-          item.likes,
-          item.comments,
-          item.downloads
-        );
+        return renderMarkup(item);
       });
       refs.galleryEl.innerHTML = markupArr.join('');
       smoothScroll(0.15);
@@ -113,15 +97,16 @@ async function searchImage(qValue, countOfPage) {
   return imagesInfo;
 }
 
-function renderMarkup(
-  webformatURL,
-  largeImageURL,
-  tags,
-  likes,
-  views,
-  comments,
-  downloads
-) {
+function renderMarkup(item) {
+  const {
+    webformatURL,
+    largeImageURL,
+    tags,
+    likes,
+    views,
+    comments,
+    downloads,
+  } = item;
   refs.brtMoreEl.classList.toggle('hidden');
   return `<div class="photo-card">
   <a href="${largeImageURL}"><img src="${webformatURL}" alt="${tags}" loading="lazy" width="100%" height="300"/></a>
