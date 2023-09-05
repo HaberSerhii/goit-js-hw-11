@@ -37,7 +37,7 @@ async function moreImageOnClick() {
     refs.brtMoreEl.classList.toggle('hidden');
     totalHits -= NUMBER_OF_IMAGE;
     if (totalHits - 1 <= NUMBER_OF_IMAGE / NUMBER_OF_IMAGE - 1) {
-      refs.brtMoreEl.setAttribute('hidden', 'true');
+      refs.brtMoreEl.classList.add('hidden', 'true');
       return refs.endOfListEL.classList.remove('hidden');
     }
     const markupArr = data.hits.map(item => {
