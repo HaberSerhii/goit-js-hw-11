@@ -36,7 +36,7 @@ async function moreImageOnClick() {
     const data = await searchImage(qValue, countOfPage);
     refs.brtMoreEl.classList.toggle('hidden');
     totalHits -= NUMBER_OF_IMAGE;
-    if (totalHits - 1 <= NUMBER_OF_IMAGE / 39) {
+    if (totalHits - 1 <= NUMBER_OF_IMAGE / NUMBER_OF_IMAGE - 1) {
       refs.brtMoreEl.setAttribute('hidden', 'true');
       return refs.endOfListEL.classList.remove('hidden');
     }
@@ -46,10 +46,10 @@ async function moreImageOnClick() {
     refs.galleryEl.insertAdjacentHTML('beforeend', markupArr.join(''));
     gallery.refresh();
     smoothScroll(0.55);
-    Notiflix.Notify.success(`"Hooray! We found ${totalHits} images."`);
+    Notiflix.Notify.success(`Залишилось передивитись ${totalHits} фотокарток.`);
     refs.brtMoreEl.classList.toggle('hidden');
   } catch (error) {
-    Notiflix.Notify.failure(`Sorry, ${error.message}`);
+    Notiflix.Notify.failure(`Вибачте, ${error.message}`);
   }
 }
 
@@ -58,7 +58,9 @@ async function formHandler(evt) {
   countOfPage = 1;
   qValue = evt.target.elements[0].value.trim();
   if (qValue === '') {
-    return Notiflix.Notify.failure('Sorry, the search must not be empty');
+    return Notiflix.Notify.failure(
+      'Вибачте, поле пошуку не повинно бути порожнім'
+    );
   }
   try {
     const data = await searchImage(qValue, countOfPage);
@@ -66,12 +68,12 @@ async function formHandler(evt) {
     if (!data.hits.length) {
       refs.galleryEl.innerHTML = '';
       Notiflix.Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.'
+        'Вибачте, немає зображень, які відповідають вашому запиту. Будь ласка, спробуйте ще раз.'
       );
     } else {
       refs.brtMoreEl.classList.remove('hidden');
       refs.endOfListEL.classList.add('hidden');
-      Notiflix.Notify.success(`"Hooray! We found ${totalHits} images."`);
+      Notiflix.Notify.success(`Ураа! Ми знайшли ${totalHits} фотокарток.`);
       refs.galleryEl.innerHTML = '';
       const markupArr = data.hits.map(item => {
         return renderMarkup(item);
